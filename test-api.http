@@ -1,0 +1,146 @@
+### API 테스트 파일
+### VS Code REST Client 확장 프로그램 사용 시 이 파일로 테스트 가능
+
+@baseUrl = http://localhost:3001
+@token = 여기에_로그인_후_받은_access_token_입력
+
+### 1. 회원가입 - 성공 케이스
+POST {{baseUrl}}/auth/signup
+Content-Type: application/json
+
+{
+  "id": "testuser123",
+  "password": "password123",
+  "nickname": "테스트유저",
+  "profileImageUrl": "https://example.com/profile.jpg"
+}
+
+### 2. 회원가입 - 프로필 이미지 없이
+POST {{baseUrl}}/auth/signup
+Content-Type: application/json
+
+{
+  "id": "user456",
+  "password": "mypassword",
+  "nickname": "닉네임테스트"
+}
+
+### 3. 회원가입 - 중복 아이디 테스트 (위에서 생성한 아이디 재사용)
+POST {{baseUrl}}/auth/signup
+Content-Type: application/json
+
+{
+  "id": "testuser123",
+  "password": "password123",
+  "nickname": "중복테스트"
+}
+
+### 4. 회원가입 - 아이디 너무 짧음 (에러 테스트)
+POST {{baseUrl}}/auth/signup
+Content-Type: application/json
+
+{
+  "id": "ab",
+  "password": "password123",
+  "nickname": "테스트"
+}
+
+### 5. 회원가입 - 아이디에 특수문자 (에러 테스트)
+POST {{baseUrl}}/auth/signup
+Content-Type: application/json
+
+{
+  "id": "test@user",
+  "password": "password123",
+  "nickname": "테스트"
+}
+
+### 6. 회원가입 - 비밀번호 너무 짧음 (에러 테스트)
+POST {{baseUrl}}/auth/signup
+Content-Type: application/json
+
+{
+  "id": "testuser",
+  "password": "12345",
+  "nickname": "테스트"
+}
+
+### 7. 회원가입 - 닉네임 너무 짧음 (에러 테스트)
+POST {{baseUrl}}/auth/signup
+Content-Type: application/json
+
+{
+  "id": "testuser",
+  "password": "password123",
+  "nickname": "A"
+}
+
+### 8. 회원가입 - 잘못된 URL 형식 (에러 테스트)
+POST {{baseUrl}}/auth/signup
+Content-Type: application/json
+
+{
+  "id": "testuser",
+  "password": "password123",
+  "nickname": "테스트",
+  "profileImageUrl": "not-a-valid-url"
+}
+
+### ============================================
+### 로그인 API 테스트
+### ============================================
+
+### 9. 로그인 - 성공 케이스 (위에서 회원가입한 아이디 사용)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "id": "testuser123",
+  "password": "password123"
+}
+
+### 10. 로그인 - 잘못된 아이디 (에러 테스트)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "id": "wronguser",
+  "password": "password123"
+}
+
+### 11. 로그인 - 잘못된 비밀번호 (에러 테스트)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "id": "testuser123",
+  "password": "wrongpassword"
+}
+
+### 12. 로그인 - 아이디 누락 (에러 테스트)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "password": "password123"
+}
+
+### 13. 로그인 - 비밀번호 누락 (에러 테스트)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "id": "testuser123"
+}
+
+### ============================================
+### 프로필 조회 API 테스트 (JWT 필요)
+### ============================================
+
+### 14. 프로필 조회 - 성공 (JWT 토큰 필요)
+GET {{baseUrl}}/auth/profile
+Authorization: Bearer {{token}}
+
+### 15. 프로필 조회 - 토큰 없음 (에러 테스트)
+GET {{baseUrl}}/auth/profile
+

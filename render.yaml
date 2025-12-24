@@ -1,0 +1,26 @@
+# Render 배포 설정 파일 (선택사항)
+# 이 파일은 Render 대시보드에서 수동으로 설정하는 대신 사용할 수 있습니다.
+# 참고: Render는 render.yaml을 완전히 지원하지 않으므로, 대시보드에서 수동 설정을 권장합니다.
+
+services:
+  - type: web
+    name: jinstargram-backend
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      # 아래 환경 변수들은 Render 대시보드에서 직접 설정해야 합니다
+      # - key: DB_HOST
+      # - key: DB_PORT
+      # - key: DB_USERNAME
+      # - key: DB_PASSWORD
+      # - key: DB_DATABASE
+      # - key: JWT_SECRET
+      # - key: JWT_EXPIRES_IN
+      # - key: JWT_REFRESH_EXPIRES_IN
+      # - key: ALLOWED_ORIGINS
+
