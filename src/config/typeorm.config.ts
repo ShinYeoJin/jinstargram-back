@@ -49,6 +49,7 @@ export class TypeOrmConfigService implements TypeOrmOptionsFactory {
       retryAttempts: 3,
       retryDelay: 3000,
       autoLoadEntities: true,
+      // 명시적으로 public 스키마 사용 (스키마 지정 없음 = public 스키마)
       // Render Managed Postgres에서는 SSL 연결이 필요하므로 DB_SSL=true 로 두고 사용
       // 로컬에서 SSL을 끄고 싶으면 .env에 DB_SSL=false 로 설정
       ssl: useSsl ? { rejectUnauthorized: false } : undefined,
