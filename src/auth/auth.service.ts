@@ -51,24 +51,38 @@ export class AuthService {
       const refreshTokenExpiresAt = this.tokenService.calculateRefreshTokenExpiresAt();
       
       // Refresh Token을 데이터베이스에 저장
-      await this.usersService.updateRefreshToken(user.id, refreshToken, refreshTokenExpiresAt);
+      try {
+        await this.usersService.updateRefreshToken(user.id, refreshToken, refreshTokenExpiresAt);
+      } catch (dbError: any) {
+        console.error('Failed to update refresh token:', dbError);
+        throw new BadRequestException('토큰 저장 중 오류가 발생했습니다.');
+      }
+      
+      // 사용자 정보 안전하게 구성
+      const userResponse = {
+        id: user.id,
+        username: user.username,
+        nickname: user.nickname || null,
+        profileImageUrl: user.profileImageUrl || null,
+        email: user.email || null,
+        createdAt: user.createdAt ? user.createdAt : new Date(),
+        updatedAt: user.updatedAt ? user.updatedAt : new Date(),
+      };
       
       return {
         access_token: accessToken,
         refresh_token: refreshToken,
-        user: {
-          id: user.id,
-          username: user.username,
-          nickname: user.nickname || null,
-          profileImageUrl: user.profileImageUrl || null,
-          email: user.email || null,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt,
-        },
+        user: userResponse,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login service error:', error);
-      throw error;
+      console.error('Error stack:', error?.stack);
+      // 이미 처리된 에러는 그대로 throw
+      if (error instanceof BadRequestException || error instanceof UnauthorizedException) {
+        throw error;
+      }
+      // 예상치 못한 에러
+      throw new BadRequestException(error?.message || '로그인 처리 중 오류가 발생했습니다.');
     }
   }
 

@@ -34,7 +34,7 @@ export class AuthController {
       
       // 쿠키에 토큰 설정
       const isProduction = process.env.NODE_ENV === 'production';
-      const cookieOptions = {
+      const cookieOptions: any = {
         httpOnly: true, // JavaScript로 접근 불가 (XSS 방지)
         secure: isProduction, // HTTPS에서만 전송 (프로덕션)
         sameSite: 'lax' as const, // CSRF 방지
@@ -42,27 +42,37 @@ export class AuthController {
         path: '/',
       };
       
-      // Access Token 쿠키 설정
-      res.cookie('access_token', result.access_token, cookieOptions);
-      
-      // Refresh Token 쿠키 설정 (7일)
-      res.cookie('refresh_token', result.refresh_token, {
-        ...cookieOptions,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
-      });
+      try {
+        // Access Token 쿠키 설정
+        res.cookie('access_token', result.access_token, cookieOptions);
+        
+        // Refresh Token 쿠키 설정 (7일)
+        res.cookie('refresh_token', result.refresh_token, {
+          ...cookieOptions,
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
+        });
+      } catch (cookieError) {
+        console.error('Cookie setting error:', cookieError);
+        throw new BadRequestException('쿠키 설정 중 오류가 발생했습니다.');
+      }
       
       // 응답에서 토큰 제거 (쿠키에만 저장)
       const { access_token, refresh_token, ...responseData } = result;
       return res.json(responseData);
-    } catch (error) {
+    } catch (error: any) {
       // 이미 처리된 에러는 그대로 throw
       if (error instanceof UnauthorizedException || error instanceof BadRequestException) {
         throw error;
       }
       
-      // 예상치 못한 에러는 로깅하고 500 에러로 변환
+      // 예상치 못한 에러는 로깅하고 상세 정보 포함
       console.error('Login error:', error);
-      throw new BadRequestException('로그인 처리 중 오류가 발생했습니다.');
+      console.error('Error stack:', error?.stack);
+      console.error('Error message:', error?.message);
+      
+      // 에러 메시지가 있으면 포함
+      const errorMessage = error?.message || '로그인 처리 중 오류가 발생했습니다.';
+      throw new BadRequestException(errorMessage);
     }
   }
 

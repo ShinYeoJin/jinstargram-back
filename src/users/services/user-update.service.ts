@@ -71,14 +71,21 @@ export class UserUpdateService {
     refreshToken: string | null,
     refreshTokenExpiresAt: Date | null,
   ): Promise<void> {
-    const user = await this.usersRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    try {
+      const user = await this.usersRepository.findOne({ where: { id: userId } });
+      if (!user) {
+        throw new NotFoundException('사용자를 찾을 수 없습니다.');
+      }
+      
+      user.refreshToken = refreshToken;
+      user.refreshTokenExpiresAt = refreshTokenExpiresAt;
+      
+      await this.usersRepository.save(user);
+    } catch (error: any) {
+      console.error('updateRefreshToken error:', error);
+      console.error('userId:', userId);
+      throw error;
     }
-    
-    user.refreshToken = refreshToken;
-    user.refreshTokenExpiresAt = refreshTokenExpiresAt;
-    await this.usersRepository.save(user);
   }
 }
 
