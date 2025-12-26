@@ -42,21 +42,28 @@ export class TypeOrmConfigService implements TypeOrmOptionsFactory {
       port: port || 5432, // 파싱 실패 시 기본값 5432 사용
       username: this.configService.get<string>('DB_USERNAME', 'postgres'),
       password: this.configService.get<string>('DB_PASSWORD', ''),
-      database: this.configService.get<string>('DB_DATABASE', 'jinstargram'),
+      database: this.configService.get<string>('DB_DATABASE', 'todo_back'),
       entities: [User],
       synchronize: false, // 수동으로 스키마 관리 (중복 인덱스 에러 방지)
       logging: this.configService.get<string>('NODE_ENV') === 'development',
       retryAttempts: 3,
       retryDelay: 3000,
       autoLoadEntities: true,
+      // 스키마 설정 (jinstargram 스키마 사용)
+      schema: this.configService.get<string>('DB_SCHEMA', 'jinstargram'),
       // Render Managed Postgres에서는 SSL 연결이 필요하므로 DB_SSL=true 로 두고 사용
       // 로컬에서 SSL을 끄고 싶으면 .env에 DB_SSL=false 로 설정
       ssl: useSsl ? { rejectUnauthorized: false } : undefined,
       extra: useSsl
         ? {
             ssl: { rejectUnauthorized: false },
+            // PostgreSQL search_path 설정 (스키마 우선순위)
+            options: `--search_path=${this.configService.get<string>('DB_SCHEMA', 'jinstargram')}`,
           }
-        : undefined,
+        : {
+            // SSL이 아닐 때도 search_path 설정
+            options: `--search_path=${this.configService.get<string>('DB_SCHEMA', 'jinstargram')}`,
+          },
     };
   }
 }
