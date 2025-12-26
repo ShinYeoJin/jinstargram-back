@@ -20,8 +20,11 @@ async function bootstrap() {
   
   // CORS 설정 (프론트엔드와 통신을 위해)
   const allowedOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',')
+    ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
     : ['http://localhost:3000'];
+  
+  // 디버깅: 허용된 origins 로깅
+  console.log('Allowed CORS Origins:', allowedOrigins);
   
   app.enableCors({
     origin: (origin, callback) => {
@@ -29,6 +32,7 @@ async function bootstrap() {
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        console.warn(`CORS blocked origin: ${origin}, Allowed:`, allowedOrigins);
         callback(new Error('CORS 정책에 의해 차단되었습니다.'));
       }
     },

@@ -32,10 +32,10 @@ export class User {
   @Column({ nullable: true, type: 'text' })
   bio?: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, name: 'refreshToken' })
   refreshToken: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, name: 'refreshTokenExpiresAt', type: 'timestamp' })
   refreshTokenExpiresAt: Date;
 
   @CreateDateColumn()

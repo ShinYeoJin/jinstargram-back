@@ -66,11 +66,13 @@ export class AuthController {
       }
       
       // 예상치 못한 에러는 로깅하고 상세 정보 포함
-      console.error('Login error:', error);
+      console.error('Login controller error:', error);
       console.error('Error stack:', error?.stack);
       console.error('Error message:', error?.message);
+      console.error('Error name:', error?.name);
+      console.error('Login DTO:', { id: loginDto.id, passwordLength: loginDto.password?.length });
       
-      // 에러 메시지가 있으면 포함
+      // 원래 에러 메시지 유지 (더 구체적인 정보 제공)
       const errorMessage = error?.message || '로그인 처리 중 오류가 발생했습니다.';
       throw new BadRequestException(errorMessage);
     }

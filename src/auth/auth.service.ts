@@ -50,12 +50,18 @@ export class AuthService {
       const refreshToken = this.tokenService.generateRefreshToken(user.id);
       const refreshTokenExpiresAt = this.tokenService.calculateRefreshTokenExpiresAt();
       
-      // Refresh Token을 데이터베이스에 저장
+      // Refresh Token을 데이터베이스에 저장 (실패해도 로그인은 성공)
       try {
         await this.usersService.updateRefreshToken(user.id, refreshToken, refreshTokenExpiresAt);
       } catch (dbError: any) {
-        console.error('Failed to update refresh token:', dbError);
-        throw new BadRequestException('토큰 저장 중 오류가 발생했습니다.');
+        console.error('Failed to update refresh token (non-critical):', dbError);
+        console.error('Error details:', {
+          message: dbError?.message,
+          stack: dbError?.stack,
+          userId: user.id,
+        });
+        // Refresh Token 저장 실패는 로그인을 막지 않음 (경고만)
+        // 단, 실제 에러가 있으면 로그에 기록
       }
       
       // 사용자 정보 안전하게 구성
@@ -77,12 +83,20 @@ export class AuthService {
     } catch (error: any) {
       console.error('Login service error:', error);
       console.error('Error stack:', error?.stack);
+      console.error('Error details:', {
+        message: error?.message,
+        name: error?.name,
+        userId: user?.id,
+      });
+      
       // 이미 처리된 에러는 그대로 throw
       if (error instanceof BadRequestException || error instanceof UnauthorizedException) {
         throw error;
       }
-      // 예상치 못한 에러
-      throw new BadRequestException(error?.message || '로그인 처리 중 오류가 발생했습니다.');
+      
+      // 예상치 못한 에러 - 원래 에러 메시지 포함
+      const errorMessage = error?.message || '로그인 처리 중 오류가 발생했습니다.';
+      throw new BadRequestException(errorMessage);
     }
   }
 
