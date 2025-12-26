@@ -13,6 +13,22 @@ export class TypeOrmConfigService implements TypeOrmOptionsFactory {
     const useSsl =
       this.configService.get<string>('DB_SSL', 'true').toLowerCase() === 'true';
 
+    // 포트를 명시적으로 파싱 (환경 변수는 문자열로 들어올 수 있음)
+    const dbPort = this.configService.get<string>('DB_PORT', '5432');
+    const port = parseInt(dbPort, 10);
+
+    // 디버깅을 위한 로깅 (개발 환경에서만)
+    const nodeEnv = this.configService.get<string>('NODE_ENV', 'development');
+    if (nodeEnv === 'development') {
+      console.log('Database Config:', {
+        host: this.configService.get<string>('DB_HOST'),
+        port: port,
+        database: this.configService.get<string>('DB_DATABASE'),
+        username: this.configService.get<string>('DB_USERNAME'),
+        ssl: useSsl,
+      });
+    }
+
     return {
       // PostgreSQL 데이터베이스 설정
       // .env 예시)
@@ -23,7 +39,7 @@ export class TypeOrmConfigService implements TypeOrmOptionsFactory {
       // DB_DATABASE=jinstargram
       type: 'postgres',
       host: this.configService.get<string>('DB_HOST', 'localhost'),
-      port: this.configService.get<number>('DB_PORT', 5432),
+      port: port || 5432, // 파싱 실패 시 기본값 5432 사용
       username: this.configService.get<string>('DB_USERNAME', 'postgres'),
       password: this.configService.get<string>('DB_PASSWORD', ''),
       database: this.configService.get<string>('DB_DATABASE', 'jinstargram'),
