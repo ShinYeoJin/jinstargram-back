@@ -23,36 +23,47 @@ export class AuthController {
 
   @Post('login')
   async login(@Body() loginDto: LoginDto, @Response({ passthrough: false }) res: ExpressResponse) {
-    // 직접 검증 방식 사용
-    const user = await this.authService.validateUser(loginDto.id, loginDto.password);
-    if (!user) {
-      throw new UnauthorizedException('아이디 또는 비밀번호가 올바르지 않습니다.');
+    try {
+      // 직접 검증 방식 사용
+      const user = await this.authService.validateUser(loginDto.id, loginDto.password);
+      if (!user) {
+        throw new UnauthorizedException('아이디 또는 비밀번호가 올바르지 않습니다.');
+      }
+      
+      const result = await this.authService.login(user);
+      
+      // 쿠키에 토큰 설정
+      const isProduction = process.env.NODE_ENV === 'production';
+      const cookieOptions = {
+        httpOnly: true, // JavaScript로 접근 불가 (XSS 방지)
+        secure: isProduction, // HTTPS에서만 전송 (프로덕션)
+        sameSite: 'lax' as const, // CSRF 방지
+        maxAge: 60 * 60 * 1000, // 1시간 (Access Token 만료 시간)
+        path: '/',
+      };
+      
+      // Access Token 쿠키 설정
+      res.cookie('access_token', result.access_token, cookieOptions);
+      
+      // Refresh Token 쿠키 설정 (7일)
+      res.cookie('refresh_token', result.refresh_token, {
+        ...cookieOptions,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
+      });
+      
+      // 응답에서 토큰 제거 (쿠키에만 저장)
+      const { access_token, refresh_token, ...responseData } = result;
+      return res.json(responseData);
+    } catch (error) {
+      // 이미 처리된 에러는 그대로 throw
+      if (error instanceof UnauthorizedException || error instanceof BadRequestException) {
+        throw error;
+      }
+      
+      // 예상치 못한 에러는 로깅하고 500 에러로 변환
+      console.error('Login error:', error);
+      throw new BadRequestException('로그인 처리 중 오류가 발생했습니다.');
     }
-    
-    const result = await this.authService.login(user);
-    
-    // 쿠키에 토큰 설정
-    const isProduction = process.env.NODE_ENV === 'production';
-    const cookieOptions = {
-      httpOnly: true, // JavaScript로 접근 불가 (XSS 방지)
-      secure: isProduction, // HTTPS에서만 전송 (프로덕션)
-      sameSite: 'lax' as const, // CSRF 방지
-      maxAge: 60 * 60 * 1000, // 1시간 (Access Token 만료 시간)
-      path: '/',
-    };
-    
-    // Access Token 쿠키 설정
-    res.cookie('access_token', result.access_token, cookieOptions);
-    
-    // Refresh Token 쿠키 설정 (7일)
-    res.cookie('refresh_token', result.refresh_token, {
-      ...cookieOptions,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
-    });
-    
-    // 응답에서 토큰 제거 (쿠키에만 저장)
-    const { access_token, refresh_token, ...responseData } = result;
-    return res.json(responseData);
   }
 
   /**

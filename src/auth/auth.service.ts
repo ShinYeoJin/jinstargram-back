@@ -38,33 +38,38 @@ export class AuthService {
    * @returns Access Token, Refresh Token 및 사용자 정보
    */
   async login(user: Omit<User, 'password'>) {
-    const payload = { 
-      sub: user.id, 
-      username: user.username,
-      email: user.email || null,
-    };
-    
-    // 토큰 발급
-    const accessToken = this.tokenService.generateAccessToken(payload);
-    const refreshToken = this.tokenService.generateRefreshToken(user.id);
-    const refreshTokenExpiresAt = this.tokenService.calculateRefreshTokenExpiresAt();
-    
-    // Refresh Token을 데이터베이스에 저장
-    await this.usersService.updateRefreshToken(user.id, refreshToken, refreshTokenExpiresAt);
-    
-    return {
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      user: {
-        id: user.id,
+    try {
+      const payload = { 
+        sub: user.id, 
         username: user.username,
-        nickname: user.nickname,
-        profileImageUrl: user.profileImageUrl,
-        email: user.email,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      },
-    };
+        email: user.email || null,
+      };
+      
+      // 토큰 발급
+      const accessToken = this.tokenService.generateAccessToken(payload);
+      const refreshToken = this.tokenService.generateRefreshToken(user.id);
+      const refreshTokenExpiresAt = this.tokenService.calculateRefreshTokenExpiresAt();
+      
+      // Refresh Token을 데이터베이스에 저장
+      await this.usersService.updateRefreshToken(user.id, refreshToken, refreshTokenExpiresAt);
+      
+      return {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          nickname: user.nickname || null,
+          profileImageUrl: user.profileImageUrl || null,
+          email: user.email || null,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        },
+      };
+    } catch (error) {
+      console.error('Login service error:', error);
+      throw error;
+    }
   }
 
   async signup(signupDto: SignupDto): Promise<boolean> {
