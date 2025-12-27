@@ -9,7 +9,7 @@ async function bootstrap() {
   // 쿠키 미들웨어
   app.use(cookieParser());
 
-  // 글로벌 ValidationPipe
+  // ValidationPipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -18,23 +18,20 @@ async function bootstrap() {
     }),
   );
 
-  // CORS 설정: 모든 vercel.app 도메인 + localhost 허용
+  // CORS 설정 (Vercel Preview 포함)
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // Postman 등 서버간 요청 허용
-      if (origin.endsWith('.vercel.app')) return callback(null, true); // Production + Preview
-      if (origin === 'http://localhost:3000' || origin === 'http://localhost:3001') return callback(null, true);
-
-      console.warn(`[CORS] BLOCKED origin: ${origin}`);
-      callback(new Error('CORS 정책에 의해 차단되었습니다.'));
+      if (!origin) return callback(null, true); // Postman, 서버간 요청 허용
+      if (origin.endsWith('.vercel.app')) return callback(null, true); // 모든 Vercel 도메인 허용
+      if (origin === 'http://localhost:3000' || origin === 'http://localhost:3001') return callback(null, true); // 로컬 개발
+      console.warn(`[CORS BLOCKED] origin: ${origin}`);
+      callback(new Error('CORS 정책에 의해 차단됨'));
     },
-    credentials: true, // 쿠키 전송 허용
+    credentials: true, // 쿠키 허용
   });
 
   const port = process.env.PORT || 3001;
   await app.listen(port);
-  console.log(`Application is running on port: ${port}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Application is running on: http://localhost:${port}`);
 }
-
 bootstrap();
