@@ -12,19 +12,22 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   // ✅ 쿠키 옵션 공통 함수
-  // HTTPS 환경 감지: Render는 항상 HTTPS이므로 NODE_ENV 대신 실제 환경 확인
   private getCookieOptions(maxAge: number = 60 * 60 * 1000) {
-    // Render/Vercel은 항상 HTTPS → secure: true, sameSite: 'none' 필수
-    // localhost만 예외 처리
-    const isLocalhost = process.env.PORT === '3001' && !process.env.RENDER;
+    // Render는 RENDER=true 환경변수가 자동 설정됨
+    const isLocalhost = !process.env.RENDER && process.env.PORT === '3001';
     
-    return {
+    const options = {
       httpOnly: true,
-      secure: !isLocalhost,           // localhost 외에는 항상 true
+      secure: !isLocalhost,
       sameSite: isLocalhost ? 'lax' as const : 'none' as const,
       maxAge,
       path: '/',
     };
+    
+    // 디버깅: 쿠키 옵션 로깅
+    console.log('[Cookie] Options:', { isLocalhost, RENDER: process.env.RENDER, PORT: process.env.PORT, ...options });
+    
+    return options;
   }
 
   @Post('register')
@@ -45,10 +48,14 @@ export class AuthController {
     const result = await this.authService.login(user);
 
     // ✅ Access Token 쿠키 (1시간)
-    res.cookie('access_token', result.access_token, this.getCookieOptions());
+    const accessOpts = this.getCookieOptions();
+    res.cookie('access_token', result.access_token, accessOpts);
+    console.log('[Login] Set access_token cookie');
 
     // ✅ Refresh Token 쿠키 (7일)
-    res.cookie('refresh_token', result.refresh_token, this.getCookieOptions(7 * 24 * 60 * 60 * 1000));
+    const refreshOpts = this.getCookieOptions(7 * 24 * 60 * 60 * 1000);
+    res.cookie('refresh_token', result.refresh_token, refreshOpts);
+    console.log('[Login] Set refresh_token cookie');
 
     const { access_token, refresh_token, ...responseData } = result;
     return res.json(responseData);
