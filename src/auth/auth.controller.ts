@@ -47,18 +47,13 @@ export class AuthController {
 
     const result = await this.authService.login(user);
 
-    // ✅ Access Token 쿠키 (1시간)
+    // ✅ 쿠키도 설정 (백업)
     const accessOpts = this.getCookieOptions();
     res.cookie('access_token', result.access_token, accessOpts);
-    console.log('[Login] Set access_token cookie');
+    res.cookie('refresh_token', result.refresh_token, this.getCookieOptions(7 * 24 * 60 * 60 * 1000));
 
-    // ✅ Refresh Token 쿠키 (7일)
-    const refreshOpts = this.getCookieOptions(7 * 24 * 60 * 60 * 1000);
-    res.cookie('refresh_token', result.refresh_token, refreshOpts);
-    console.log('[Login] Set refresh_token cookie');
-
-    const { access_token, refresh_token, ...responseData } = result;
-    return res.json(responseData);
+    // ✅ 응답에 토큰 포함 (Authorization header 방식 지원)
+    return res.json(result);
   }
 
   @UseGuards(JwtAuthGuard)
