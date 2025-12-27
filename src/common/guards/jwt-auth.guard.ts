@@ -33,6 +33,17 @@ export class JwtAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest() as Request & { cookies?: { access_token?: string; refresh_token?: string } };
     
+    // 디버깅: 요청 정보 로깅
+    console.log('[JwtAuthGuard] Request headers:', {
+      authorization: request.headers.authorization ? 'Bearer ***' : undefined,
+      cookie: request.headers.cookie ? '(exists)' : undefined,
+      origin: request.headers.origin,
+    });
+    console.log('[JwtAuthGuard] Cookies:', {
+      access_token: request.cookies?.access_token ? '(exists)' : undefined,
+      refresh_token: request.cookies?.refresh_token ? '(exists)' : undefined,
+    });
+    
     // 쿠키에서 토큰 읽기 (우선순위)
     let token: string | undefined = request.cookies?.access_token;
     
@@ -40,6 +51,8 @@ export class JwtAuthGuard implements CanActivate {
     if (!token) {
       token = this.extractTokenFromHeader(request);
     }
+
+    console.log('[JwtAuthGuard] Token found:', token ? 'yes' : 'no');
 
     if (!token) {
       throw new UnauthorizedException('인증 토큰이 없습니다.');

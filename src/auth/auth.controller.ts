@@ -42,15 +42,24 @@ export class AuthController {
         path: '/',
       };
       
+      // 디버깅: 쿠키 설정 로깅
+      console.log('[Login] Cookie options:', {
+        ...cookieOptions,
+        isProduction,
+        NODE_ENV: process.env.NODE_ENV,
+      });
+      
       try {
         // Access Token 쿠키 설정
         res.cookie('access_token', result.access_token, cookieOptions);
+        console.log('[Login] access_token cookie set');
         
         // Refresh Token 쿠키 설정 (7일)
         res.cookie('refresh_token', result.refresh_token, {
           ...cookieOptions,
           maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
         });
+        console.log('[Login] refresh_token cookie set');
       } catch (cookieError) {
         console.error('Cookie setting error:', cookieError);
         throw new BadRequestException('쿠키 설정 중 오류가 발생했습니다.');
