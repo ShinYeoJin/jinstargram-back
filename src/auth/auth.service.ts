@@ -197,42 +197,36 @@ export class AuthService {
   }
 
   async logout(userId?: number, refreshToken?: string) {
+    // ✅ 로그아웃은 항상 성공 (토큰 없어도 OK)
+    // Safari ITP 등으로 쿠키가 전송되지 않을 수 있음
+    
     let targetUserId: number | null = null;
 
-    // userId가 제공된 경우 (Access Token으로 인증된 경우)
+    // userId가 제공된 경우
     if (userId) {
       targetUserId = userId;
     }
-    // Refresh Token이 제공된 경우 (Access Token이 만료된 경우)
+    // Refresh Token이 제공된 경우
     else if (refreshToken) {
       try {
-        // Refresh Token 검증
         const payload = this.tokenService.verifyRefreshToken(refreshToken);
-
-        // 데이터베이스에서 사용자 조회 및 Refresh Token 확인
         const user = await this.usersService.findOne(payload.sub);
-        if (!user || !user.refreshToken || user.refreshToken !== refreshToken) {
-          throw new UnauthorizedException('유효하지 않은 리프레시 토큰입니다.');
+        if (user?.refreshToken === refreshToken) {
+          targetUserId = user.id;
         }
-
-        targetUserId = user.id;
       } catch (error) {
-        if (error instanceof UnauthorizedException) {
-          throw error;
-        }
-        throw new UnauthorizedException('리프레시 토큰 검증에 실패했습니다.');
+        // 토큰 검증 실패해도 로그아웃은 진행
+        console.log('[Logout] Token verification failed, but proceeding with logout');
       }
-    } else {
-      throw new BadRequestException('사용자 ID 또는 리프레시 토큰이 필요합니다.');
     }
 
+    // 사용자 ID가 있으면 서버 측 토큰 무효화
     if (targetUserId) {
-      // Refresh Token 제거
       await this.usersService.updateRefreshToken(targetUserId, null, null);
-      return { message: '로그아웃되었습니다.' };
     }
 
-    throw new UnauthorizedException('로그아웃에 실패했습니다.');
+    // ✅ 항상 성공 반환 (프론트에서 쿠키/localStorage 정리)
+    return { message: '로그아웃되었습니다.' };
   }
 }
 
