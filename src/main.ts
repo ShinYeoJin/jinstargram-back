@@ -19,27 +19,45 @@ async function bootstrap() {
   );
   
   // CORS 설정 (프론트엔드와 통신을 위해)
-  const allowedOrigins = process.env.ALLOWED_ORIGINS
+  // 추가 허용 origins (환경변수에서)
+  const additionalOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
-    : ['http://localhost:3000'];
+    : [];
   
-  // 디버깅: 허용된 origins 로깅
   console.log('=== CORS Configuration ===');
   console.log('NODE_ENV:', process.env.NODE_ENV);
-  console.log('ALLOWED_ORIGINS env:', process.env.ALLOWED_ORIGINS);
-  console.log('Parsed origins:', allowedOrigins);
+  console.log('Additional origins:', additionalOrigins);
+  console.log('*.vercel.app domains: ALLOWED');
+  console.log('localhost:3000: ALLOWED');
   
   app.enableCors({
     origin: (origin, callback) => {
-      console.log('[CORS] Request from origin:', origin);
-      // origin이 없거나 허용된 origin 목록에 있으면 허용
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.warn(`[CORS] BLOCKED origin: ${origin}`);
-        console.warn('[CORS] Allowed origins:', allowedOrigins);
-        callback(new Error('CORS 정책에 의해 차단되었습니다.'));
+      // origin이 없으면 허용 (서버 간 요청, Postman 등)
+      if (!origin) {
+        return callback(null, true);
       }
+      
+      // *.vercel.app 도메인 전체 허용 (프로덕션 + Preview)
+      if (origin.endsWith('.vercel.app')) {
+        console.log('[CORS] Allowed (vercel.app):', origin);
+        return callback(null, true);
+      }
+      
+      // localhost 개발 환경 허용
+      if (origin === 'http://localhost:3000' || origin === 'http://localhost:3001') {
+        console.log('[CORS] Allowed (localhost):', origin);
+        return callback(null, true);
+      }
+      
+      // 추가 허용 origins 확인
+      if (additionalOrigins.includes(origin)) {
+        console.log('[CORS] Allowed (additional):', origin);
+        return callback(null, true);
+      }
+      
+      // 그 외는 차단
+      console.warn(`[CORS] BLOCKED origin: ${origin}`);
+      callback(new Error('CORS 정책에 의해 차단되었습니다.'));
     },
     credentials: true,
   });
