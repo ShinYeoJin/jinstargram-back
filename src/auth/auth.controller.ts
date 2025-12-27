@@ -96,10 +96,19 @@ export class AuthController {
     const refreshToken = req.cookies?.refresh_token;
     await this.authService.logout(undefined, refreshToken);
 
-    // ✅ 쿠키 제거 (sameSite, secure 옵션도 동일하게 설정해야 제대로 삭제됨)
-    const clearOptions = this.getCookieOptions(0);
-    res.clearCookie('access_token', clearOptions);
-    res.clearCookie('refresh_token', clearOptions);
+    // ✅ Safari ITP 대응: clearCookie 대신 빈 값 + 즉시 만료로 덮어쓰기
+    const isLocalhost = !process.env.RENDER && process.env.PORT === '3001';
+    const expireOptions = {
+      httpOnly: true,
+      secure: !isLocalhost,
+      sameSite: isLocalhost ? 'lax' as const : 'none' as const,
+      path: '/',
+      expires: new Date(0), // 1970년 = 즉시 만료
+    };
+    
+    res.cookie('access_token', '', expireOptions);
+    res.cookie('refresh_token', '', expireOptions);
+    console.log('[Logout] Cookies expired');
 
     return res.json({ message: '로그아웃되었습니다.' });
   }
