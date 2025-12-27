@@ -12,14 +12,18 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   // ✅ 쿠키 옵션 공통 함수
-  private getCookieOptions(isProduction: boolean, maxAge: number = 60 * 60 * 1000) {
+  // HTTPS 환경 감지: Render는 항상 HTTPS이므로 NODE_ENV 대신 실제 환경 확인
+  private getCookieOptions(maxAge: number = 60 * 60 * 1000) {
+    // Render/Vercel은 항상 HTTPS → secure: true, sameSite: 'none' 필수
+    // localhost만 예외 처리
+    const isLocalhost = process.env.PORT === '3001' && !process.env.RENDER;
+    
     return {
       httpOnly: true,
-      secure: isProduction,                 // HTTPS에서만 전송
-      sameSite: isProduction ? 'none' as const : 'lax' as const, // cross-site 허용
+      secure: !isLocalhost,           // localhost 외에는 항상 true
+      sameSite: isLocalhost ? 'lax' as const : 'none' as const,
       maxAge,
       path: '/',
-      // domain 제거 → cross-site 쿠키 문제 해결
     };
   }
 
@@ -39,13 +43,12 @@ export class AuthController {
     if (!user) throw new UnauthorizedException('아이디 또는 비밀번호가 올바르지 않습니다.');
 
     const result = await this.authService.login(user);
-    const isProduction = process.env.NODE_ENV === 'production';
 
-    // ✅ Access Token 쿠키
-    res.cookie('access_token', result.access_token, this.getCookieOptions(isProduction));
+    // ✅ Access Token 쿠키 (1시간)
+    res.cookie('access_token', result.access_token, this.getCookieOptions());
 
     // ✅ Refresh Token 쿠키 (7일)
-    res.cookie('refresh_token', result.refresh_token, this.getCookieOptions(isProduction, 7 * 24 * 60 * 60 * 1000));
+    res.cookie('refresh_token', result.refresh_token, this.getCookieOptions(7 * 24 * 60 * 60 * 1000));
 
     const { access_token, refresh_token, ...responseData } = result;
     return res.json(responseData);
@@ -79,10 +82,9 @@ export class AuthController {
     if (!refreshToken) throw new BadRequestException('리프레시 토큰이 필요합니다.');
 
     const result = await this.authService.refreshAccessToken(refreshToken);
-    const isProduction = process.env.NODE_ENV === 'production';
 
     // 새 Access Token 쿠키
-    res.cookie('access_token', result.access_token, this.getCookieOptions(isProduction));
+    res.cookie('access_token', result.access_token, this.getCookieOptions());
 
     return res.json({ message: '토큰이 갱신되었습니다.' });
   }
@@ -92,11 +94,10 @@ export class AuthController {
     const refreshToken = req.cookies?.refresh_token;
     await this.authService.logout(undefined, refreshToken);
 
-    const isProduction = process.env.NODE_ENV === 'production';
-
-    // ✅ 쿠키 제거
-    res.clearCookie('access_token', { path: '/' });
-    res.clearCookie('refresh_token', { path: '/' });
+    // ✅ 쿠키 제거 (sameSite, secure 옵션도 동일하게 설정해야 제대로 삭제됨)
+    const clearOptions = this.getCookieOptions(0);
+    res.clearCookie('access_token', clearOptions);
+    res.clearCookie('refresh_token', clearOptions);
 
     return res.json({ message: '로그아웃되었습니다.' });
   }
