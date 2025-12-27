@@ -37,7 +37,7 @@ export class AuthController {
       const cookieOptions: any = {
         httpOnly: true, // JavaScript로 접근 불가 (XSS 방지)
         secure: isProduction, // HTTPS에서만 전송 (프로덕션)
-        sameSite: 'lax' as const, // CSRF 방지
+        sameSite: isProduction ? 'none' as const : 'lax' as const, // 크로스 도메인 허용 (프로덕션)
         maxAge: 60 * 60 * 1000, // 1시간 (Access Token 만료 시간)
         path: '/',
       };
@@ -130,7 +130,7 @@ export class AuthController {
     res.cookie('access_token', result.access_token, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: 'lax',
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: 60 * 60 * 1000, // 1시간
       path: '/',
     });
