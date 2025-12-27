@@ -6,6 +6,7 @@ import * as cookieParser from 'cookie-parser';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // 🔴 이 순서가 매우 중요
   app.use(cookieParser());
 
   app.useGlobalPipes(
@@ -16,43 +17,30 @@ async function bootstrap() {
     }),
   );
 
-  // CORS 동적 허용
-  const additionalOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-    : [];
-
-  console.log('=== CORS Configuration ===');
-  console.log('NODE_ENV:', process.env.NODE_ENV);
-  console.log('Additional origins from env:', additionalOrigins);
-
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // 서버 간 호출(Postman 등)
+      // Postman / Server-to-server
+      if (!origin) return callback(null, true);
 
-      if (/\.vercel\.app$/.test(origin)) {
-        console.log('[CORS] Allowed (vercel.app):', origin);
+      // ✅ 모든 Vercel (Preview + Prod)
+      if (origin.endsWith('.vercel.app')) {
         return callback(null, true);
       }
 
-      if (origin === 'http://localhost:3000' || origin === 'http://localhost:3001') {
-        console.log('[CORS] Allowed (localhost):', origin);
+      // ✅ Local dev
+      if (origin === 'http://localhost:3000') {
         return callback(null, true);
       }
 
-      if (additionalOrigins.includes(origin)) {
-        console.log('[CORS] Allowed (additional):', origin);
-        return callback(null, true);
-      }
-
-      console.warn('[CORS] BLOCKED origin:', origin);
-      callback(new Error('CORS 정책에 의해 차단되었습니다.'));
+      return callback(new Error('CORS blocked'));
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   const port = process.env.PORT || 10000;
   await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}`);
 }
 
 bootstrap();
