@@ -11,15 +11,15 @@ import { Response as ExpressResponse } from 'express';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // 공통 쿠키 옵션 함수
+  // ✅ 쿠키 옵션 공통 함수
   private getCookieOptions(isProduction: boolean, maxAge: number = 60 * 60 * 1000) {
     return {
       httpOnly: true,
-      secure: isProduction,              // HTTPS에서만 전송
+      secure: isProduction,                 // HTTPS에서만 전송
       sameSite: isProduction ? 'none' as const : 'lax' as const, // cross-site 허용
       maxAge,
       path: '/',
-      domain: isProduction ? '.onrender.com' : undefined, // Render HTTPS 환경용
+      // domain 제거 → cross-site 쿠키 문제 해결
     };
   }
 
@@ -33,18 +33,20 @@ export class AuthController {
     return await this.authService.signup(signupDto);
   }
 
-  
   @Post('login')
   async login(@Body() loginDto: LoginDto, @Response({ passthrough: false }) res: ExpressResponse) {
     const user = await this.authService.validateUser(loginDto.id, loginDto.password);
     if (!user) throw new UnauthorizedException('아이디 또는 비밀번호가 올바르지 않습니다.');
-  
+
     const result = await this.authService.login(user);
     const isProduction = process.env.NODE_ENV === 'production';
-  
+
+    // ✅ Access Token 쿠키
     res.cookie('access_token', result.access_token, this.getCookieOptions(isProduction));
+
+    // ✅ Refresh Token 쿠키 (7일)
     res.cookie('refresh_token', result.refresh_token, this.getCookieOptions(isProduction, 7 * 24 * 60 * 60 * 1000));
-  
+
     const { access_token, refresh_token, ...responseData } = result;
     return res.json(responseData);
   }
@@ -57,10 +59,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Patch('profile')
-  async updateProfile(
-    @Request() req: { user: { userId: number } },
-    @Body() updateProfileDto: UpdateProfileDto
-  ) {
+  async updateProfile(@Request() req: { user: { userId: number } }, @Body() updateProfileDto: UpdateProfileDto) {
     return await this.authService.updateProfile(req.user.userId, updateProfileDto);
   }
 
@@ -82,6 +81,7 @@ export class AuthController {
     const result = await this.authService.refreshAccessToken(refreshToken);
     const isProduction = process.env.NODE_ENV === 'production';
 
+    // 새 Access Token 쿠키
     res.cookie('access_token', result.access_token, this.getCookieOptions(isProduction));
 
     return res.json({ message: '토큰이 갱신되었습니다.' });
@@ -93,8 +93,10 @@ export class AuthController {
     await this.authService.logout(undefined, refreshToken);
 
     const isProduction = process.env.NODE_ENV === 'production';
-    res.clearCookie('access_token', { path: '/', domain: isProduction ? '.onrender.com' : undefined });
-    res.clearCookie('refresh_token', { path: '/', domain: isProduction ? '.onrender.com' : undefined });
+
+    // ✅ 쿠키 제거
+    res.clearCookie('access_token', { path: '/' });
+    res.clearCookie('refresh_token', { path: '/' });
 
     return res.json({ message: '로그아웃되었습니다.' });
   }

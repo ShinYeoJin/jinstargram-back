@@ -18,15 +18,15 @@ async function bootstrap() {
     }),
   );
 
-  // CORS 설정
+  // CORS
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // 서버 간 요청(Postman 등)
-      if (origin.endsWith('.vercel.app')) return callback(null, true); // Vercel 모든 도메인
-      if (origin.startsWith('http://localhost')) return callback(null, true); // 개발환경
+      if (!origin) return callback(null, true); // Postman 등
+      if (origin.endsWith('.vercel.app')) return callback(null, true);
+      if (origin.startsWith('http://localhost')) return callback(null, true);
       callback(new Error('CORS blocked'));
     },
-    credentials: true, // 쿠키 전송 허용 필수
+    credentials: true, // 쿠키 허용
   });
 
   const port = process.env.PORT || 3001;
