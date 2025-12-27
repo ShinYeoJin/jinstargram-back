@@ -6,9 +6,10 @@ import * as cookieParser from 'cookie-parser';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // 🔴 이 순서가 매우 중요
+  // 쿠키 파서 미들웨어
   app.use(cookieParser());
 
+  // 전역 ValidationPipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -17,30 +18,32 @@ async function bootstrap() {
     }),
   );
 
+  // CORS 설정: 모든 vercel.app + localhost 허용
   app.enableCors({
     origin: (origin, callback) => {
-      // Postman / Server-to-server
-      if (!origin) return callback(null, true);
+      if (!origin) return callback(null, true); // Postman, 서버 간 호출 허용
 
-      // ✅ 모든 Vercel (Preview + Prod)
       if (origin.endsWith('.vercel.app')) {
+        console.log('[CORS] Allowed vercel.app:', origin);
         return callback(null, true);
       }
 
-      // ✅ Local dev
-      if (origin === 'http://localhost:3000') {
+      if (origin === 'http://localhost:3000' || origin === 'http://localhost:3001') {
+        console.log('[CORS] Allowed localhost:', origin);
         return callback(null, true);
       }
 
-      return callback(new Error('CORS blocked'));
+      console.warn(`[CORS] BLOCKED origin: ${origin}`);
+      callback(new Error('CORS 정책에 의해 차단되었습니다.'));
     },
-    credentials: true,
-    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true, // 쿠키 전송 허용
   });
 
-  const port = process.env.PORT || 10000;
+  // 서버 포트
+  const port = process.env.PORT || 3001;
   await app.listen(port);
+  console.log(`Application is running on: http://localhost:${port}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 }
 
 bootstrap();
