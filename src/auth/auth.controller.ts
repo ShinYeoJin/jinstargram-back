@@ -15,11 +15,11 @@ export class AuthController {
   private getCookieOptions(isProduction: boolean, maxAge: number = 60 * 60 * 1000) {
     return {
       httpOnly: true,
-      secure: isProduction, // HTTPS
-      sameSite: isProduction ? 'none' as const : 'lax' as const, // 크로스 도메인 허용
+      secure: isProduction,              // HTTPS에서만 전송
+      sameSite: isProduction ? 'none' as const : 'lax' as const, // cross-site 허용
       maxAge,
       path: '/',
-      domain: isProduction ? '.onrender.com' : undefined, // Render 환경용
+      domain: isProduction ? '.onrender.com' : undefined, // Render HTTPS 환경용
     };
   }
 
@@ -35,20 +35,19 @@ export class AuthController {
 
   
   @Post('login')
-async login(@Body() loginDto: LoginDto, @Response({ passthrough: false }) res: ExpressResponse) {
-  const user = await this.authService.validateUser(loginDto.id, loginDto.password);
-  if (!user) throw new UnauthorizedException('아이디 또는 비밀번호가 올바르지 않습니다.');
-
-  const result = await this.authService.login(user);
-  const isProduction = process.env.NODE_ENV === 'production';
-  const cookieOptions = this.getCookieOptions(isProduction);
-
-  res.cookie('access_token', result.access_token, cookieOptions);
-  res.cookie('refresh_token', result.refresh_token, this.getCookieOptions(isProduction, 7 * 24 * 60 * 60 * 1000));
-
-  const { access_token, refresh_token, ...responseData } = result;
-  return res.json(responseData);
-}
+  async login(@Body() loginDto: LoginDto, @Response({ passthrough: false }) res: ExpressResponse) {
+    const user = await this.authService.validateUser(loginDto.id, loginDto.password);
+    if (!user) throw new UnauthorizedException('아이디 또는 비밀번호가 올바르지 않습니다.');
+  
+    const result = await this.authService.login(user);
+    const isProduction = process.env.NODE_ENV === 'production';
+  
+    res.cookie('access_token', result.access_token, this.getCookieOptions(isProduction));
+    res.cookie('refresh_token', result.refresh_token, this.getCookieOptions(isProduction, 7 * 24 * 60 * 60 * 1000));
+  
+    const { access_token, refresh_token, ...responseData } = result;
+    return res.json(responseData);
+  }
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
@@ -78,14 +77,14 @@ async login(@Body() loginDto: LoginDto, @Response({ passthrough: false }) res: E
   @Post('refresh')
   async refreshToken(@Request() req: { cookies?: { refresh_token?: string } }, @Response({ passthrough: false }) res: ExpressResponse) {
     const refreshToken = req.cookies?.refresh_token;
-    if (!refreshToken) throw new BadRequestException('리프레시 토큰 필요');
+    if (!refreshToken) throw new BadRequestException('리프레시 토큰이 필요합니다.');
 
     const result = await this.authService.refreshAccessToken(refreshToken);
     const isProduction = process.env.NODE_ENV === 'production';
 
     res.cookie('access_token', result.access_token, this.getCookieOptions(isProduction));
 
-    return res.json({ message: '토큰 갱신 완료' });
+    return res.json({ message: '토큰이 갱신되었습니다.' });
   }
 
   @Post('logout')
@@ -97,6 +96,6 @@ async login(@Body() loginDto: LoginDto, @Response({ passthrough: false }) res: E
     res.clearCookie('access_token', { path: '/', domain: isProduction ? '.onrender.com' : undefined });
     res.clearCookie('refresh_token', { path: '/', domain: isProduction ? '.onrender.com' : undefined });
 
-    return res.json({ message: '로그아웃 완료' });
+    return res.json({ message: '로그아웃되었습니다.' });
   }
 }
